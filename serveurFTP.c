@@ -37,12 +37,76 @@ void sigint_handler_fils(int sig)
 }
 
 /* ---------------------------------------------------------------
-   Q3 : Traitement d'une connexion client
-   (sera complété aux questions suivantes)
+   Q6 : traitement d'une requête GET
+   Envoie le fichier au client par blocs de BLOCK_SIZE octets
+   --------------------------------------------------------------- */
+void handle_get(int connfd, request_t *req)
+{
+    response_t resp;
+    struct stat st;
+    char filepath[MAXFILENAME + sizeof(SERVER_DIR) + 2];
+    int filefd;
+    char buf[BLOCK_SIZE];
+    ssize_t n;
+
+    /* construire le chemin complet vers le fichier */
+    snprintf(filepath, sizeof(filepath), "%s/%s", SERVER_DIR, req->filename);
+
+    /* vérifier que le fichier existe */
+    if (stat(filepath, &st) < 0) {
+        resp.retcode  = FTP_ERROR;
+        resp.filesize = 0;
+        snprintf(resp.message, MAXLINE,
+                 "Erreur : fichier '%s' introuvable.", req->filename);
+        Rio_writen(connfd, &resp, sizeof(response_t));
+        return;
+    }
+
+    /* envoyer la réponse positive avec la taille du fichier */
+    resp.retcode  = FTP_OK;
+    resp.filesize = (long)st.st_size;
+    snprintf(resp.message, MAXLINE, "OK");
+    Rio_writen(connfd, &resp, sizeof(response_t));
+
+    /* envoyer le fichier par blocs */
+    filefd = Open(filepath, O_RDONLY, 0);
+    while ((n = Read(filefd, buf, BLOCK_SIZE)) > 0)
+        Rio_writen(connfd, buf, n);
+    Close(filefd);
+}
+
+/* ---------------------------------------------------------------
+   Q6 : Traitement d'une connexion client
    --------------------------------------------------------------- */
 void handle_client(int connfd)
 {
-    /* TODO : recevoir et traiter la requête */
+    rio_t     rio;
+    request_t req;
+
+    Rio_readinitb(&rio, connfd);
+
+    /* recevoir la requête */
+    if (Rio_readnb(&rio, &req, sizeof(request_t)) <= 0) {
+        Close(connfd);
+        return;
+    }
+
+    /* dispatcher selon le type de requête */
+    switch ((typereq_t)req.type) {
+        case GET:
+            handle_get(connfd, &req);
+            break;
+        default: {
+            response_t resp;
+            resp.retcode  = FTP_ERROR;
+            resp.filesize = 0;
+            snprintf(resp.message, MAXLINE,
+                     "Erreur : type de requête inconnu.");
+            Rio_writen(connfd, &resp, sizeof(response_t));
+            break;
+        }
+    }
+
     Close(connfd);
 }
 
@@ -58,6 +122,9 @@ int main(int argc, char **argv)
 
     /* Q4 : le père installe son traitant SIGINT */
     Signal(SIGINT, sigint_handler_pere);
+
+    /* Q5 : créer le répertoire serveur s'il n'existe pas */
+    mkdir(SERVER_DIR, 0755);
 
     listenfd = Open_listenfd(SERVER_PORT);
     printf("[serveur] en écoute sur le port %d (répertoire : %s)\n",
