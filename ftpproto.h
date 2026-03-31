@@ -1,40 +1,44 @@
-#ifndef __FTPPROTO_H__
-#define __FTPPROTO_H__
+#ifndef FTP_H
+#define FTP_H
 
-#define SERVER_PORT  2121          /* port d'écoute du serveur FTP */
-#define MAXFILENAME  256           /* taille max d'un nom de fichier */
-#define BLOCK_SIZE   4096          /* taille des blocs de transfert */
+#include "csapp.h"
 
-/* ---------------------------------------------------------------
-   Q1 : Types de requêtes possibles
-   --------------------------------------------------------------- */
-typedef enum {
-    GET = 1,   /* télécharger un fichier depuis le serveur */
-    PUT,       /* envoyer un fichier vers le serveur       */
-    LS,        /* lister le répertoire du serveur          */
-    BYE        /* terminer la connexion                    */
+#define MASTER_PORT 2121
+#define SLAVE_BASE_PORT 3000
+#define SLAVE_REG_PORT 2122   /* port d'enregistrement des esclaves auprès du maître */
+#define NB_SLAVES 2
+#define CHUNK_SIZE 4096 // Q8: Taille des blocs pour le transfert
+
+// Q1: Types de requêtes
+typedef enum { 
+    REQ_GET, 
+    REQ_PUT, 
+    REQ_LS, 
+    REQ_RM, 
+    REQ_BYE, 
+    REQ_AUTH 
 } typereq_t;
 
-/* ---------------------------------------------------------------
-   Q2 : Structure d'une requête client serveur
-   --------------------------------------------------------------- */
+// Q2: Structure de la requête client -> serveur
 typedef struct {
-    int  type;                     /* type de la requête (typereq_t) */
-    char filename[MAXFILENAME];    /* nom du fichier concerné */
+    typereq_t type;
+    char filename[MAXLINE];
+    off_t resume_offset;    // Q10: Offset pour la reprise après panne
+    char username[MAXLINE]; // Q17: Authentification
+    char password[MAXLINE];
+    size_t file_size;       // Utile pour le PUT (non détaillé ici mais prévu)
 } request_t;
 
-/* ---------------------------------------------------------------
-   Q2 : Structure d'une réponse serveur client
-   --------------------------------------------------------------- */
-typedef enum {
-    FTP_OK    = 0,   
-    FTP_ERROR = 1    
-} retcode_t;
-
+// Structure de la réponse serveur -> client
 typedef struct {
-    int  retcode;           /* code de retour (retcode_t) */
-    long filesize;         
-    char message[MAXLINE];  
+    int code; // 200: OK, 404: Not Found, 401: Unauthorized
+    size_t file_size;
 } response_t;
 
-#endif /* __FTPPROTO_H__ */
+// Informations pour la redirection du Master vers l'Esclave
+typedef struct {
+    char ip[INET_ADDRSTRLEN];
+    int port;
+} slave_info_t;
+
+#endif
