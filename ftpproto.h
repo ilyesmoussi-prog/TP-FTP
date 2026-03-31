@@ -1,15 +1,14 @@
-#ifndef FTP_H
-#define FTP_H
+#ifndef __FTPPROTO_H__
+#define __FTPPROTO_H__
 
 #include "csapp.h"
 
 #define MASTER_PORT 2121
 #define SLAVE_BASE_PORT 3000
-#define SLAVE_REG_PORT 2122   /* port d'enregistrement des esclaves auprès du maître */
+#define SLAVE_REG_PORT 2122
 #define NB_SLAVES 2
-#define CHUNK_SIZE 4096 // Q8: Taille des blocs pour le transfert
+#define CHUNK_SIZE 4096
 
-// Q1: Types de requêtes
 typedef enum { 
     REQ_GET, 
     REQ_PUT, 
@@ -19,23 +18,20 @@ typedef enum {
     REQ_AUTH 
 } typereq_t;
 
-// Q2: Structure de la requête client -> serveur
 typedef struct {
     typereq_t type;
     char filename[MAXLINE];
-    off_t resume_offset;    // Q10: Offset pour la reprise après panne
-    char username[MAXLINE]; // Q17: Authentification
+    off_t resume_offset;
+    char username[MAXLINE];
     char password[MAXLINE];
-    size_t file_size;       // Utile pour le PUT (non détaillé ici mais prévu)
+    size_t file_size;
 } request_t;
 
-// Structure de la réponse serveur -> client
 typedef struct {
-    int code; // 200: OK, 404: Not Found, 401: Unauthorized
+    int code;
     size_t file_size;
 } response_t;
 
-// Informations pour la redirection du Master vers l'Esclave
 typedef struct {
     char ip[INET_ADDRSTRLEN];
     int port;
