@@ -11,7 +11,7 @@ INCLUDE = csapp.h ftpproto.h
 OBJS    = csapp.o
 INCLDIR = -I.
 
-PROGS = q1 q3 slaveFtp masterFtp clientFtp
+PROGS = q1 q3 slaveFTP masterFTP clientFTP
 
 all: $(PROGS)
 
